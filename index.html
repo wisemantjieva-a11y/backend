@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>The Razor Edge - Master Admin System</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: #0a0a0a; color: #f5f5f5; display: flex; min-height: 100vh; overflow-x: hidden; }
+        aside { width: 320px; background-color: #141414; border-right: 1px solid #262626; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 18px; letter-spacing: 1px; color: #fafafa; margin-bottom: 10px; }
+        .brand-dot { width: 8px; height: 8px; background-color: #f59e0b; border-radius: 50%; }
+        .form-card { background-color: #1a1a1a; border: 1px solid #262626; border-radius: 14px; padding: 16px; margin-bottom: 10px; }
+        .form-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #a3a3a3; margin-bottom: 12px; letter-spacing: 0.5px; }
+        .group { margin-bottom: 10px; }
+        label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #737373; margin-bottom: 4px; }
+        .control { width: 100%; background-color: #0a0a0a; border: 1px solid #262626; padding: 8px 12px; border-radius: 8px; color: #fafafa; font-size: 13px; outline: none; transition: 0.2s; }
+        .control:focus { border-color: #f59e0b; }
+        .btn { width: 100%; background-color: #f59e0b; color: #0a0a0a; border: none; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: 0.2s; }
+        .btn:hover { background-color: #d97706; }
+        main { flex: 1; padding: 32px; overflow-y: auto; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+        h1 { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; }
+        .badge-live { display: flex; align-items: center; gap: 6px; background-color: #141414; border: 1px solid #262626; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; color: #10b981; }
+        .pulse { width: 6px; height: 6px; background-color: #10b981; border-radius: 50%; }
+        .kpi-row { display: grid; grid-template-cols: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 32px; }
+        .kpi-card { background-color: #141414; border: 1px solid #262626; padding: 20px; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
+        .kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #737373; }
+        .kpi-val { font-size: 24px; font-weight: 900; margin-top: 6px; font-family: monospace; color: #fafafa; }
+        .workspace-grid { display: grid; grid-template-cols: 2fr 1fr; gap: 24px; margin-bottom: 24px; }
+        @media (max-width: 1024px) { .workspace-grid { grid-template-cols: 1fr; } }
+        .panel { background-color: #141414; border: 1px solid #262626; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .panel-title { font-size: 14px; font-weight: 800; text-transform: uppercase; color: #e5e5e5; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #222; }
+        .table-list { display: flex; flex-direction: column; gap: 8px; }
+        .item-row { background-color: #0d0d0d; border: 1px solid #262626; padding: 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .item-meta { font-size: 14px; font-weight: 700; color: #e5e5e5; }
+        .item-sub { font-size: 11px; color: #a3a3a3; margin-top: 2px; }
+        .status-pill { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 12px; text-transform: uppercase; }
+        .status-busy { background-color: rgba(245,158,11,0.1); color: #f59e0b; }
+        .status-open { background-color: rgba(16,185,129,0.1); color: #10b981; }
+        .btn-action { background-color: #262626; border: 1px solid #404040; color: #fafafa; padding: 4px 8px; font-size: 10px; font-weight: 700; border-radius: 6px; cursor: pointer; text-transform: uppercase; margin-top: 6px; }
+        .btn-action:hover { background-color: #ef4444; border-color: #ef4444; }
+        .table-row { display: grid; grid-template-cols: 2fr 1fr 1fr; font-size: 13px; padding: 10px 8px; border-bottom: 1px solid #222; }
+        .table-header { font-weight: 800; color: #737373; text-transform: uppercase; font-size: 10px; border-bottom: 2px solid #262626; }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div>
+            <div class="brand"><div class="brand-dot"></div>THE RAZOR EDGE</div>
+            <div class="form-card">
+                <div class="form-title">Walk-In Check-In Form</div>
+                <form id="checkin-fm">
+                    <div class="group">
+                        <label>Client Full Name</label>
+                        <input type="text" id="c-name" class="control" placeholder="e.g. Liam Smith" required autocomplete="off">
+                    </div>
+                    <div class="group">
+                        <label>Hair Cut Service</label>
+                        <select id="c-service" class="control">
+                            <option value="Skin Fade" data-dur="45" data-pr="35.00">Skin Fade ($35.00)</option>
+                            <option value="Classic Taper" data-dur="30" data-pr="25.00">Classic Taper ($25.00)</option>
+                            <option value="Buzz Cut" data-dur="15" data-pr="15.00">Buzz Cut ($15.00)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn">Check In Client</button>
+                </form>
+            </div>
+            <div class="form-card">
+                <div class="form-title">Product Counter Sale</div>
+                <form id="product-fm">
+                    <div class="group">
+                        <label>Select Inventory Item</label>
+                        <select id="p-select" class="control"></select>
+                    </div>
+                    <button type="submit" class="btn" style="background-color: #10b981; color: #ffffff;">Log Product Sale</button>
+                </form>
+            </div>
+        </div>
+        <div style="color: #404040; font-size: 10px; font-family: monospace;">SECURE ENGINE BOUNDARY TERMINAL</div>
+    </aside>
+
+    <main>
+        <header>
+            <div>
+                <h1>Executive Master Control Panel</h1>
+                <div style="color: #a3a3a3; font-size: 13px; margin-top: 2px;">Unified webpage architecture mapping operations, splits, commission, and product suites.</div>
+            </div>
+            <div class="badge-live"><div class="pulse"></div>SYSTEM OPERATIONAL</div>
+        </header>
+
+        <section class="kpi-row">
+            <div class="kpi-card"><div class="kpi-lbl">Est Store Wait</div><div id="kpi-wait" class="kpi-val">0 Mins</div></div>
+            <div class="kpi-card"><div class="kpi-lbl">Total Queued</div><div id="kpi-queued" class="kpi-val">0 Bookings</div></div>
+            <div class="kpi-card"><div class="kpi-lbl">Gross Store Cash</div><div id="kpi-rev" class="kpi-val">$0.00</div></div>
+            <div class="kpi-card"><div class="kpi-lbl">Active Staff Chairs</div><div id="kpi-chairs" class="kpi-val">0 Chairs</div></div>
+        </section>
+
+        <div class="workspace-grid">
+            <div class="panel">
+                <div class="panel-title">Barber Availability Matrix & Commission Tracking</div>
+                <div id="barber-box" class="table-list"></div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">Active Walk-In Queue Line</div>
+                <div id="queue-box" class="table-list"></div>
+            </div>
+        </div>
+
+        <div class="workspace-grid" style="grid-template-cols: 1fr;">
+            <div class="panel">
+                <div class="panel-title">Retail Product Inventory & Sales Audit</div>
+                <div id="inventory-box" class="table-list"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let appState = {
+            revenue: 4850.00,
+            chairs: [
+                { id: "b1", name: "Marcus V.", currentJob: "Mid Skin Fade", queueMinutes: 15, status: "BUSY", performance: 94, baseCom: 50 },
+                { id: "b2", name: "Sarah Connor", currentJob: "Idle / Rest", queueMinutes: 0, status: "AVAILABLE", performance: 98, baseCom: 60 },
+                { id: "b3", name: "Alex Jones", currentJob: "Beard Sculpt & Shave", queueMinutes: 30, status: "BUSY", performance: 89, baseCom: 50 }
+            ],
+            queue: [
+                { id: 1, name: "Ethan Hunt", request: "Buzz Cut", duration: 15, waitTime: "5m left" },
+                { id: 2, name: "Bruce Wayne", request: "Classic Taper", duration: 30, waitTime: "15m left" }
+            ],
+            inventory: [
+                { name: "Matte Pomade (High Hold)", stock: 14, price: 24.00, sales: 32 },
+                { name: "Premium Beard Conditioning Oil", stock: 6, price: 18.50, sales: 45 },
+                { name: "Sea Salt Texturizing Spray", stock: 22, price: 19.99, sales: 19 }
+            ]
+        };
+
+        function hydrateMasterDashboard() {
+            const remainingLines = appState.chairs.map(c => c.queueMinutes);
+            const minimumWait = Math.min(...remainingLines);
+            const activeChairsCount = appState.chairs.filter(c => c.status === "BUSY").length;
+
+            document.getElementById('kpi-wait').innerText = minimumWait + " Mins";
+            document.getElementById('kpi-queued').innerText = appState.queue.length + " Clients";
+            document.getElementById('kpi-rev').innerText = "$" + appState.revenue.toFixed(2);
+            document.getElementById('kpi-chairs').innerText = activeChairsCount + " / " + appState.chairs.length;
+
