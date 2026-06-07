@@ -20,6 +20,7 @@ app.use('/api/shops',    shopRoutes);
 const bookingsRouter = require('./routes/bookings');
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/admin',   require('./routes/admin-routes'));
 
 // Global error handler
 app.use((err, req, res, next) => {
