@@ -41,7 +41,7 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: 'Name, area, address and phone are required' });
     }
     const result = await db.query(`
-      INSERT INTO barbershops (name, area, address, phone, whatsapp, description)
+      INSERT INTO barbershops (name, area, address, phone, whatsapp, description, is_active)
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
     `, [name, area, address, phone, whatsapp || null, description || null]);
