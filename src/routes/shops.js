@@ -33,4 +33,23 @@ router.get('/:id/services', async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = router;// POST /api/shops — register a new barbershop
+router.post('/', async (req, res, next) => {
+  try {
+    const { name, area, address, phone, whatsapp, description } = req.body;
+    if (!name || !area || !address || !phone) {
+      return res.status(400).json({ error: 'Name, area, address and phone are required' });
+    }
+    const result = await db.query(`
+      INSERT INTO barbershops (name, area, address, phone, whatsapp, description)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [name, area, address, phone, whatsapp || null, description || null]);
+    const shop = result.rows[0];
+    await db.query(`
+      INSERT INTO subscriptions (shop_id, plan, next_billing)
+      VALUES ($1, 'basic', NOW() + INTERVAL '30 days')
+    `, [shop.id]);
+    res.status(201).json({ shop, message: 'Barbershop registered successfully' });
+  } catch (err) { next(err); }
+});
