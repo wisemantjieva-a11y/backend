@@ -36,7 +36,7 @@ router.get('/:id/services', async (req, res) => {
 module.exports = router;// POST /api/shops — register a new barbershop
 router.post('/', async (req, res, next) => {
   try {
-    const { name, area, address, phone, whatsapp, description } = req.body;
+    const db = pool; const { name, area, address, phone, whatsapp, description } = req.body;
     if (!name || !area || !address || !phone) {
       return res.status(400).json({ error: 'Name, area, address and phone are required' });
     }
