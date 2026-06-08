@@ -79,7 +79,7 @@ router.post('/', async (req, res) => {
       VALUES ($1, 'basic', 'pending', NOW() + INTERVAL '30 days')
       ON CONFLICT (shop_id) DO NOTHING
     `, [shop.id]);
-    res.status(201).json({ shop, message: 'Barbershop registered successfully' });
+    // Save availability hours
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
