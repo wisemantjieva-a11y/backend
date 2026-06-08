@@ -2,10 +2,52 @@ const express = require('express');
 const router  = express.Router();
 const pool    = require('../db');
 
+// Helper to check if a shop is open right now based on local time
+function checkIsOpen(availabilityRows) {
+  // Get current day and time specifically for Africa/Windhoek timezone
+  const options = { timeZone: 'Africa/Windhoek', hour12: false, hour: '2-digit', minute: '2-digit', weekday: 'short' };
+  const formatter = new Intl.DateTimeFormat('en-US', options);
+  const parts = formatter.formatToParts(new Date());
+  
+  let currentDayName = '';
+  let currentHour = '';
+  let currentMinute = '';
+  
+  parts.forEach(part => {
+    if (part.type === 'weekday') currentDayName = part.value; // e.g., "Mon"
+    if (part.type === 'hour') currentHour = part.value;
+    if (part.type === 'minute') currentMinute = part.value;
+  });
+
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const currentDayIndex = DAYS.indexOf(currentDayName);
+  
+  const todayHours = availabilityRows.find(h => h.day_of_week === currentDayIndex);
+  if (!todayHours || todayHours.is_closed) return false;
+
+  const currentTotalMinutes = parseInt(currentHour) * 60 + parseInt(currentMinute);
+  
+  const [openH, openM] = todayHours.open_time.split(':').map(Number);
+  const [closeH, closeM] = todayHours.close_time.split(':').map(Number);
+  
+  const openTotalMinutes = openH * 60 + openM;
+  const closeTotalMinutes = closeH * 60 + closeM;
+
+  return currentTotalMinutes >= openTotalMinutes && currentTotalMinutes < closeTotalMinutes;
+}
+
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM barbershops WHERE is_active = true ORDER BY created_at DESC');
-    res.json(result.rows);
+    const shops = result.rows;
+
+    // Fetch availability for all shops to append status dynamically
+    for (let shop of shops) {
+      const availability = await pool.query('SELECT * FROM availability WHERE shop_id = $1', [shop.id]);
+      shop.is_open = checkIsOpen(availability.rows);
+    }
+
+    res.json(shops);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -16,7 +58,12 @@ router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM barbershops WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Shop not found' });
-    res.json(result.rows[0]);
+    
+    const shop = result.rows[0];
+    const availability = await pool.query('SELECT * FROM availability WHERE shop_id = $1', [shop.id]);
+    shop.is_open = checkIsOpen(availability.rows);
+    
+    res.json(shop);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
