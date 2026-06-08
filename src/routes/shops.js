@@ -59,7 +59,7 @@ router.get('/:id', async (req, res) => {
     const result = await pool.query('SELECT * FROM barbershops WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Shop not found' });
     
-    const shop = result.rows[0];
+    const shop = result.rows[0]; 
     const availability = await pool.query('SELECT * FROM availability WHERE shop_id = $1', [shop.id]);
     shop.is_open = checkIsOpen(availability.rows);
     
@@ -91,7 +91,7 @@ router.get('/:id/availability/:date', async (req, res) => {
     if (!hours.rows || hours.rows.length === 0 || hours.rows[0].is_closed) {
       return res.json({ slots: [], message: 'Shop is closed on this day' });
     }
-    const h = hours.rows[0];
+    const h = hours.rows[0]; 
     const slots = [];
     const openParts = h.open_time.split(':').map(Number);
     const closeParts = h.close_time.split(':').map(Number);
@@ -126,7 +126,7 @@ router.post('/', async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, true)
       RETURNING *
     `, [name, area, address, phone, whatsapp || null, description || null]);
-    const shop = result.rows[0];
+    const shop = result.rows[0]; 
 
     await pool.query(`
       INSERT INTO subscriptions (shop_id, plan, status, next_billing)
