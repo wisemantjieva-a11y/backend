@@ -88,7 +88,7 @@ router.get('/:id/availability/:date', async (req, res) => {
     const hours = await pool.query(
       'SELECT * FROM availability WHERE shop_id = $1 AND day_of_week = $2', [id, dayOfWeek]
     );
-    if (!hours.rows[0] || hours.rows[0].is_closed) {
+    if (!hours.rows || hours.rows.length === 0 || hours.rows[0].is_closed) {
       return res.json({ slots: [], message: 'Shop is closed on this day' });
     }
     const h = hours.rows[0];
