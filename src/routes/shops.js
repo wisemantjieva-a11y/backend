@@ -123,7 +123,7 @@ router.post('/', async (req, res) => {
     }
     const result = await pool.query(`
       INSERT INTO barbershops (name, area, address, phone, whatsapp, description, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6, false)
+      VALUES ($1, $2, $3, $4, $5, $6, true)
       RETURNING *
     `, [name, area, address, phone, whatsapp || null, description || null]);
     const shop = result.rows[0];
