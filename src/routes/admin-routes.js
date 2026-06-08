@@ -10,14 +10,14 @@ function adminAuth(req, res, next) {
   next();
 }
 
-// GET /api/admin/shops — all shops with subscription status
 router.get('/shops', adminAuth, async (req, res, next) => {
   try {
     const { rows } = await pool.query(`
-      SELECT
-        s.id, s.name, s.area, s.address, s.phone,
+      SELECT s.id, s.name, s.area, s.address, s.phone,
         s.is_active, s.created_at,
-        sub.plan, sub.status AS sub_status, sub.next_billing,
+        COALESCE(sub.plan,'basic') AS plan,
+        COALESCE(sub.status,'pending') AS sub_status,
+        sub.next_billing,
         COUNT(b.id) AS booking_count
       FROM barbershops s
       LEFT JOIN subscriptions sub ON sub.shop_id = s.id
@@ -29,24 +29,19 @@ router.get('/shops', adminAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PATCH /api/admin/shops/:id/approve — approve a shop
 router.patch('/shops/:id/approve', adminAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
     await pool.query(`UPDATE barbershops SET is_active = true WHERE id = $1`, [id]);
-
-    // create subscription if not exists
     await pool.query(`
       INSERT INTO subscriptions (shop_id, plan, status, next_billing)
       VALUES ($1, 'basic', 'active', NOW() + INTERVAL '30 days')
-      ON CONFLICT (shop_id) DO NOTHING
+      ON CONFLICT (shop_id) DO UPDATE SET status='active', next_billing=NOW() + INTERVAL '30 days'
     `, [id]);
-
     res.json({ message: 'Shop approved' });
   } catch (err) { next(err); }
 });
 
-// PATCH /api/admin/shops/:id/reject — reject/deactivate a shop
 router.patch('/shops/:id/reject', adminAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -56,7 +51,6 @@ router.patch('/shops/:id/reject', adminAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PATCH /api/admin/shops/:id/lock — lock out unpaid shop
 router.patch('/shops/:id/lock', adminAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -66,7 +60,6 @@ router.patch('/shops/:id/lock', adminAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PATCH /api/admin/shops/:id/unlock — unlock after payment
 router.patch('/shops/:id/unlock', adminAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -79,18 +72,14 @@ router.patch('/shops/:id/unlock', adminAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/admin/stats — platform overview
 router.get('/stats', adminAuth, async (req, res, next) => {
   try {
-    const [shops, bookings, revenue] = await Promise.all([
-      pool.query(`SELECT COUNT(*) FROM barbershops WHERE is_active = true`),
-      pool.query(`SELECT COUNT(*) FROM bookings WHERE status != 'cancelled'`),
-      pool.query(`SELECT COALESCE(SUM(price_nad),0) AS total FROM bookings b JOIN services sv ON sv.id = b.service_id WHERE b.status = 'completed'`),
-    ]);
+    const shops = await pool.query(`SELECT COUNT(*) FROM barbershops WHERE is_active = true`);
+    const bookings = await pool.query(`SELECT COUNT(*) FROM bookings WHERE status != 'cancelled'`);
     res.json({
-      active_shops:   parseInt(shops.rows[0].count),
+      active_shops: parseInt(shops.rows[0].count),
       total_bookings: parseInt(bookings.rows[0].count),
-      total_revenue:  parseInt(revenue.rows[0].total),
+      total_revenue: 0,
       monthly_recurring: parseInt(shops.rows[0].count) * 150,
     });
   } catch (err) { next(err); }
