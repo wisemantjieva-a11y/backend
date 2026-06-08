@@ -4,7 +4,8 @@ const pool    = require('../db');
 
 // Helper to check if a shop is open right now based on local time
 function checkIsOpen(availabilityRows) {
-  // Get current day and time specifically for Africa/Windhoek timezone
+  if (!availabilityRows || availabilityRows.length === 0) return false;
+
   const options = { timeZone: 'Africa/Windhoek', hour12: false, hour: '2-digit', minute: '2-digit', weekday: 'short' };
   const formatter = new Intl.DateTimeFormat('en-US', options);
   const parts = formatter.formatToParts(new Date());
@@ -14,7 +15,7 @@ function checkIsOpen(availabilityRows) {
   let currentMinute = '';
   
   parts.forEach(part => {
-    if (part.type === 'weekday') currentDayName = part.value; // e.g., "Mon"
+    if (part.type === 'weekday') currentDayName = part.value; 
     if (part.type === 'hour') currentHour = part.value;
     if (part.type === 'minute') currentMinute = part.value;
   });
@@ -41,7 +42,6 @@ router.get('/', async (req, res) => {
     const result = await pool.query('SELECT * FROM barbershops WHERE is_active = true ORDER BY created_at DESC');
     const shops = result.rows;
 
-    // Fetch availability for all shops to append status dynamically
     for (let shop of shops) {
       const availability = await pool.query('SELECT * FROM availability WHERE shop_id = $1', [shop.id]);
       shop.is_open = checkIsOpen(availability.rows);
