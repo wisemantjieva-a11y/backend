@@ -1,8 +1,7 @@
 const express = require('express');
-const router  = require('express').Router();
+const router  = express.Router();
 const pool    = require('../db');
 
-// GET all active shops
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM barbershops WHERE is_active = true ORDER BY created_at DESC');
@@ -13,7 +12,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET single shop
 router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM barbershops WHERE id = $1', [req.params.id]);
@@ -25,7 +23,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// GET shop services
 router.get('/:id/services', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM services WHERE shop_id = $1 AND is_active = true', [req.params.id]);
@@ -36,12 +33,11 @@ router.get('/:id/services', async (req, res) => {
   }
 });
 
-// GET available time slots
 router.get('/:id/availability/:date', async (req, res) => {
   try {
     const { id, date } = req.params;
     const duration = parseInt(req.query.duration) || 30;
-    const dayOfWeek = new Date(date).getDay();
+    const dayOfWeek = new Date(date + 'T12:00:00').getDay();
     const hours = await pool.query(
       'SELECT * FROM availability WHERE shop_id = $1 AND day_of_week = $2', [id, dayOfWeek]
     );
@@ -50,10 +46,10 @@ router.get('/:id/availability/:date', async (req, res) => {
     }
     const h = hours.rows[0];
     const slots = [];
-    const [oh, om] = h.open_time.split(':').map(Number);
-    const [ch, cm] = h.close_time.split(':').map(Number);
-    const openMin = oh * 60 + om;
-    const closeMin = ch * 60 + cm;
+    const openParts = h.open_time.split(':').map(Number);
+    const closeParts = h.close_time.split(':').map(Number);
+    const openMin = openParts[0] * 60 + openParts[1];
+    const closeMin = closeParts[0] * 60 + closeParts[1];
     const booked = await pool.query(
       "SELECT TO_CHAR(booking_time,'HH24:MI') AS t FROM bookings WHERE shop_id=$1 AND booking_date=$2 AND status!='cancelled'",
       [id, date]
@@ -72,15 +68,12 @@ router.get('/:id/availability/:date', async (req, res) => {
   }
 });
 
-// POST register new shop
 router.post('/', async (req, res) => {
   try {
     const { name, area, address, phone, whatsapp, description, hours, services } = req.body;
     if (!name || !area || !address || !phone) {
       return res.status(400).json({ error: 'Name, area, address and phone are required' });
     }
-
-    // Create shop as inactive (pending approval)
     const result = await pool.query(`
       INSERT INTO barbershops (name, area, address, phone, whatsapp, description, is_active)
       VALUES ($1, $2, $3, $4, $5, $6, false)
@@ -88,17 +81,16 @@ router.post('/', async (req, res) => {
     `, [name, area, address, phone, whatsapp || null, description || null]);
     const shop = result.rows[0];
 
-    // Save subscription as pending
     await pool.query(`
       INSERT INTO subscriptions (shop_id, plan, status, next_billing)
       VALUES ($1, 'basic', 'pending', NOW() + INTERVAL '30 days')
       ON CONFLICT (shop_id) DO NOTHING
     `, [shop.id]);
 
-    // Save opening hours
     const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     if (hours && Array.isArray(hours)) {
-      for (const h of hours) {
+      for (let i = 0; i < hours.length; i++) {
+        const h = hours[i];
         const dayIndex = DAYS.indexOf(h.day);
         if (dayIndex >= 0) {
           await pool.query(`
@@ -106,14 +98,14 @@ router.post('/', async (req, res) => {
             VALUES ($1, $2, $3, $4, $5)
             ON CONFLICT (shop_id, day_of_week) DO UPDATE
             SET open_time=$3, close_time=$4, is_closed=$5
-          `, [shop.id, dayIndex, h.open, h.close, h.closed || false]);
+          `, [shop.id, dayIndex, h.open || '08:00', h.close || '18:00', h.closed ? true : false]);
         }
       }
     }
 
-    // Save services
     if (services && Array.isArray(services)) {
-      for (const s of services) {
+      for (let i = 0; i < services.length; i++) {
+        const s = services[i];
         if (s.name && s.price) {
           await pool.query(`
             INSERT INTO services (shop_id, name, price_nad, duration_min)
